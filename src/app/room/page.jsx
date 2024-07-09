@@ -21,7 +21,7 @@ export default function Page() {
   const [token, setToken] = useState("");
   const [joined, setJoined] = useState(false);
 
-  const handleLeave = async () => {
+  const handleLeaves = async () => {
     try {
       await fetch(`/api/room`, {
         method: 'DELETE',
@@ -37,21 +37,50 @@ export default function Page() {
     }
   };
 
+  
+
   useEffect(() => {
+    const handleLeave = async () => {
+      try {
+        await fetch(`/api/room`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ roomId: room }),
+        });
+        setJoined(false);
+        setToken("");
+      } catch (e) {
+        console.error(e);
+      }
+    };
+  
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        handleLeave();
+      }
+    };
+  
     if (joined) {
       // Setup beforeunload event listener
       window.addEventListener('beforeunload', handleLeave);
+      // Setup event listener for visibility change
+      document.addEventListener('visibilitychange', handleVisibilityChange);
     }
-
+  
     return () => {
       // Cleanup: Remove beforeunload event listener
       window.removeEventListener('beforeunload', handleLeave);
+      // Cleanup: Remove event listener for visibility change
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       // Call handleLeave function to ensure user leaves the room
-      if (joined) {
+      if (joined && document.visibilityState === 'hidden') {
         handleLeave();
       }
     };
   }, [joined, room]);
+  
 
   const handleJoin = async () => {
     try {
@@ -99,10 +128,12 @@ export default function Page() {
       serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
       data-lk-theme="default"
       style={{ height: '100dvh' }}
+      onDisconnected={handleLeaves}
     >
       <VideoConference
         chatMessageFormatter={formatChatMessageLinks}
         SettingsComponent={SettingsMenu}
+        onChange={e=>console.log(e)}
       />
     </LiveKitRoom>
   );
