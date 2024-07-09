@@ -39,6 +39,7 @@ export default function Page() {
 
   
 
+ 
   useEffect(() => {
     const handleLeave = async () => {
       try {
@@ -65,8 +66,11 @@ export default function Page() {
     if (joined) {
       // Setup beforeunload event listener
       window.addEventListener('beforeunload', handleLeave);
-      // Setup event listener for visibility change
-      document.addEventListener('visibilitychange', handleVisibilityChange);
+      
+      // Check if it's a mobile device before adding visibility change listener
+      if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+      }
     }
   
     return () => {
