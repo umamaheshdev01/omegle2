@@ -1,25 +1,50 @@
 "use client";
 
 import {
-  ControlBar,
   GridLayout,
   LiveKitRoom,
   ParticipantTile,
-  RoomAudioRenderer,
   useTracks,
   VideoConference,
   formatChatMessageLinks,
-  SettingsMenu
+  SettingsMenu,
 } from "@livekit/components-react";
 import "@livekit/components-styles";
 import { Track } from "livekit-client";
 import { useEffect, useState } from "react";
 
 export default function Page() {
-  const [room, setRoom] = useState("");
-  const [name, setName] = useState("");
+  const [roomId, setRoomId] = useState("");
   const [token, setToken] = useState("");
   const [joined, setJoined] = useState(false);
+
+  // Generate a random user ID
+  const userId = `user_${Math.random().toString(36).substr(2, 9)}`;
+
+  const handleJoin = async () => {
+    try {
+      // Fetch or create a room and get the token
+      const roomResponse = await fetch(`/api/room`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ }),
+      });
+      const roomData = await roomResponse.json();
+      const roomId = roomData.roomId;
+      setRoomId(roomId);
+
+      const tokenResponse = await fetch(
+        `/api/get-participant-token?room=${roomId}&username=${userId}`
+      );
+      const tokenData = await tokenResponse.json();
+      setToken(tokenData.token);
+      setJoined(true);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const handleLeave = async () => {
     try {
@@ -28,7 +53,7 @@ export default function Page() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ roomId: room }),
+        body: JSON.stringify({ roomId : parseInt(roomId) }),
       });
       setJoined(false);
       setToken("");
@@ -38,46 +63,17 @@ export default function Page() {
   };
 
   useEffect(() => {
-    if (joined) {
-      // Setup beforeunload event listener
-      window.addEventListener('beforeunload', handleLeave);
-    }
+    const handleBeforeUnload = () => {
+      handleLeave();
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
-      // Cleanup: Remove beforeunload event listener
-      window.removeEventListener('beforeunload', handleLeave);
-      // Call handleLeave function to ensure user leaves the room
-      if (joined) {
-        handleLeave();
-      }
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      handleLeave();
     };
-  }, [joined, room]);
-
-  const handleJoin = async () => {
-    try {
-      const roomResponse = await fetch(`/api/room`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({}),
-      });
-
-      const roomData = await roomResponse.json();
-      const roomId = roomData.roomId;
-      setRoom(roomId);
-
-      let c = `user_${Math.round(Math.random() * 1000000).toString()}`;
-      setName(c);
-
-      const tokenResponse = await fetch(`/api/get-participant-token?room=${roomId}&username=${c}`);
-      const tokenData = await tokenResponse.json();
-      setToken(tokenData.token);
-      setJoined(true);
-    } catch (e) {
-      console.error('Error:', e);
-    }
-  };
+  }, [roomId]);
 
   if (!joined) {
     return (
@@ -98,12 +94,15 @@ export default function Page() {
       token={token}
       serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
       data-lk-theme="default"
-      style={{ height: '100dvh' }}
+      style={{ height: "100dvh" }}
     >
       <VideoConference
         chatMessageFormatter={formatChatMessageLinks}
         SettingsComponent={SettingsMenu}
       />
+      <button onClick={handleLeave} style={{ position: "absolute", top: 10, right: 10 }}>
+        Leave Room
+      </button>
     </LiveKitRoom>
   );
 }
@@ -118,7 +117,7 @@ function MyVideoConference() {
   );
 
   return (
-    <GridLayout tracks={tracks} style={{ height: 'calc(100vh - var(--lk-control-bar-height))' }}>
+    <GridLayout tracks={tracks} style={{ height: "calc(100vh - var(--lk-control-bar-height))" }}>
       <ParticipantTile />
     </GridLayout>
   );
