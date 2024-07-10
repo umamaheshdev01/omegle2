@@ -7,8 +7,6 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 export async function POST(req) {
     try {
-       
-
         // Find a room with only one member
         const { data: rooms, error: fetchError } = await supabase
             .from('room')
@@ -20,8 +18,11 @@ export async function POST(req) {
         let roomId;
         
         if (rooms.length > 0) {
-            // Add user to the existing room
-            roomId = rooms[0].id;
+            // Select a random room from the array
+            const randomRoomIndex = Math.floor(Math.random() * rooms.length);
+            roomId = rooms[randomRoomIndex].id;
+
+            // Add user to the selected room
             const { error: updateError } = await supabase
                 .from('room')
                 .update({ members: 2 })
@@ -37,11 +38,7 @@ export async function POST(req) {
 
             if (insertError) throw insertError;
 
-           
-
             roomId = newRoom[0].id;
-            
-            return NextResponse.json({ roomId }, { status: 200 });
         }
 
         return NextResponse.json({ roomId }, { status: 200 });
@@ -50,7 +47,6 @@ export async function POST(req) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
-
 
 export async function DELETE(req) {
     try {
