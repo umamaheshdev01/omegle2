@@ -31,25 +31,23 @@ export default function Page() {
 
   const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
 
-  useEffect(() => {
-    const channel = supabase.channel('custom-all-channel')
+  supabase.channel('custom-all-channel')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'room' },
         async (payload) => {
           if (payload.eventType === 'UPDATE' && payload.new.id === room) {
             if (payload.new.members === 1) {
-              await refreshPage();
+               console.log(payload.new.members)
+                await refreshPage()
+              
             }
           }
         }
       )
-      .subscribe();
+  .subscribe();
 
-    return () => {
-      channel.unsubscribe();
-    };
-  }, [room]);
+  
 
   const handleLeaves = async () => {
     try {
@@ -77,12 +75,15 @@ export default function Page() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ roomId: room }),
+      }).then(()=>{
+        setRoom(0)
+        setToken('')
       });
-      setToken("");
+      
 
       setTimeout(() => {
         handleJoin();
-      }, 500); // Delay to ensure unmount
+      }, 500); 
     } catch (e) {
       console.error(e);
     }
@@ -139,11 +140,14 @@ export default function Page() {
     }
   };
 
-  if (joining) {
-    return <div style={{ textAlign: 'center', marginTop: '50vh' }}>Joining...</div>;
-  }
+  
 
   if (!joined) {
+  
+    if (joining) {
+      return <div style={{ textAlign: 'center', marginTop: '50vh' }}>Joining...</div>;
+    }
+
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
         <button
